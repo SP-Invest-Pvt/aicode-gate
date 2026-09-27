@@ -40,6 +40,8 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--attribution", metavar="YAML",
                         help="attribution rules (default: <repo>/attribution.yaml if present, else built-in)")
         sp.add_argument("--format", choices=["table", "json"], default="table")
+        sp.add_argument("--ignore-whitespace", action="store_true",
+                        help="blame with -w so re-indenting a line does not change its author")
 
     at = sub.add_parser("attribute", help="per-file AI line counts and ratio")
     common(at)
@@ -53,7 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def cmd_attribute(a) -> int:
-    rows = attribute(a.repo, _attribution_cfg(a), prefixes=a.path)
+    rows = attribute(a.repo, _attribution_cfg(a), prefixes=a.path, ignore_whitespace=a.ignore_whitespace)
     if a.format == "json":
         print(json.dumps([{"file": f.path, "total": f.total, "ai_lines": f.ai_lines, "ai_ratio": round(f.ai_ratio, 4)}
                           for f in rows.values()], indent=2))
@@ -72,7 +74,8 @@ def cmd_attribute(a) -> int:
 def cmd_check(a) -> int:
     policy = load_policy(a.policy)
     findings = load_sarif(a.sarif, a.repo)
-    attributed = attribute(a.repo, _attribution_cfg(a), prefixes=list(policy.critical_paths))
+    attributed = attribute(a.repo, _attribution_cfg(a), prefixes=list(policy.critical_paths),
+                           ignore_whitespace=a.ignore_whitespace)
     rows = file_densities(attributed, findings)
     violations = evaluate(rows, policy)
     critical_rows = [r for r in rows if is_critical(r.file, policy)]

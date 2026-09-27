@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -235,3 +236,29 @@ def test_cli_help_and_usage(capsys):
     assert main(["--help"]) == 0
     assert "attribute" in capsys.readouterr().out
     assert main(["check", "--repo", "."]) == 2  # --sarif and --policy are required
+
+
+def _reindent_util_as_human(repo):
+    write(repo, "src/util.py", [f"    bot_util_{i} = {i}" for i in range(1, 6)])
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "style: indent util")
+
+
+def test_reindenting_changes_author_by_default(repo):
+    _reindent_util_as_human(repo)
+    assert attribute(repo, CFG)["src/util.py"].ai_lines == 0
+
+
+def test_ignore_whitespace_keeps_ai_origin(repo, capsys):
+    _reindent_util_as_human(repo)
+    assert attribute(repo, CFG, ignore_whitespace=True)["src/util.py"].ai_lines == 5
+    code, out, _ = run(capsys, "attribute", "--repo", repo, "--ignore-whitespace", "--format", "json")
+    assert code == 0 and {r["file"]: r["ai_lines"] for r in json.loads(out)}["src/util.py"] == 5
+
+
+def test_blame_ignore_revs_file_is_honoured(repo):
+    _reindent_util_as_human(repo)
+    head = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True,
+                          check=True).stdout.strip()
+    (repo / ".git-blame-ignore-revs").write_text(f"# formatting\n{head}\n")
+    assert attribute(repo, CFG)["src/util.py"].ai_lines == 5

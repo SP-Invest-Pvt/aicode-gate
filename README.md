@@ -66,8 +66,8 @@ python -m aicode_gate --help
 ## Usage
 
 ```
-python -m aicode_gate attribute --repo . [--attribution attribution.yaml] [--path PREFIX ...] [--format table|json]
-python -m aicode_gate check --repo . --sarif findings.sarif --policy policy.yaml [--attribution attribution.yaml] [--format table|json]
+python -m aicode_gate attribute --repo . [--attribution attribution.yaml] [--path PREFIX ...] [--ignore-whitespace] [--format table|json]
+python -m aicode_gate check --repo . --sarif findings.sarif --policy policy.yaml [--attribution attribution.yaml] [--ignore-whitespace] [--format table|json]
 ```
 
 `check` runs `git blame` only for files under `critical_paths`, so it stays fast on large repositories. Exit codes: `0` gate passed (or attribution printed), `1` policy violated, `2` usage, configuration or git error (for example a missing key in the policy, malformed SARIF, or a directory that is not a repository). Logs go to stderr; tables and JSON go to stdout.
@@ -108,7 +108,7 @@ fail_on_unknown_origin: false            # true: also fail files with lines from
 ## Limitations
 
 * **Attribution is a heuristic.** It sees only what commit metadata admits to. Code pasted from a chat window, suggestions accepted inline under a human's name, and squash merges that drop trailers all count as human. Treat the AI share as a lower bound.
-* **Blame follows the last change.** A human who reformats an AI-written line becomes its author. `git blame` options such as `-w` or `--ignore-rev` are not applied yet.
+* **Blame follows the last change.** A human who edits an AI-written line becomes its author. Pure re-indentation is handled by `--ignore-whitespace` (git blame `-w`), and formatting-only commits listed in the repository's `.git-blame-ignore-revs` are skipped automatically. Substantive edits still move the line to the editor.
 * **Small numbers are noisy.** One finding in 17 AI lines is 58.8 per KLOC. Density is meaningful across a module or a quarter, not for a single small file, so set the ceiling with your own baseline in mind.
 * **Findings count equally.** A low-severity note and a critical injection each add one. Filter the SARIF by severity before the gate if that matters for your policy.
 * **Scanner coverage bounds everything.** A density of zero means the scanner found nothing, not that the code is safe.
