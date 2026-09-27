@@ -2,11 +2,11 @@
 
 See which lines of a repository came from AI-attributed commits, and fail the build when that code carries more SAST findings per 1,000 lines than your policy allows in the paths that matter.
 
-[![ci](https://github.com/SP-Invest-Pvt/aicode-gate/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+[![ci](https://github.com/sp-kernel-stack/aicode-gate/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 ## The problem
 
-A growing share of code is written with AI assistants, and several studies have found more security weaknesses in AI-suggested code than in the surrounding human-written code. Reviewers cannot act on that because a diff does not say which lines an assistant wrote. SAST results do not say it either, so nobody can tell whether AI-written code in the authentication or payments module is getting worse.
+A growing share of code is written with AI assistants, and AI suggestions can carry security weaknesses like any other code. Teams that want to watch whether AI-written code is riskier than the rest cannot, because a diff does not say which lines an assistant wrote. SAST results do not say it either, so nobody can tell whether AI-written code in the authentication or payments module is getting worse.
 
 The information often exists in git history anyway: bot authors such as `Copilot`, and trailers such as `Co-Authored-By: Claude` that coding agents add to commits. aicode-gate reads it, attributes every line through `git blame`, joins SAST findings to those lines, and applies a density ceiling to critical paths.
 
@@ -57,7 +57,7 @@ What Bandit found in the AI-attributed lines: a password-reset token built from 
 Python 3.11 or newer and `git` on `PATH`. The only dependency is PyYAML.
 
 ```bash
-git clone https://github.com/SP-Invest-Pvt/aicode-gate && cd aicode-gate
+git clone https://github.com/sp-kernel-stack/aicode-gate && cd aicode-gate
 pip install -e ".[test]"
 pytest
 python -m aicode_gate --help
@@ -79,7 +79,7 @@ python -m aicode_gate check --repo . --sarif findings.sarif --policy policy.yaml
   with:
     fetch-depth: 0            # blame needs history
 - run: bandit -r src -f sarif -o findings.sarif || true   # or any SARIF-producing scanner
-- uses: SP-Invest-Pvt/aicode-gate@main
+- uses: sp-kernel-stack/aicode-gate@main
   with:
     sarif: findings.sarif
     policy: .github/aicode-gate.yaml
