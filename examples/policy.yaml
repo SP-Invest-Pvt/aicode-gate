@@ -1,0 +1,4 @@
+# Findings per 1,000 AI-written lines allowed in critical paths. Equal to the limit passes.
+max_ai_density_critical_paths: 5.0
+critical_paths: ["src/auth/", "src/payments/"]
+fail_on_unknown_origin: false

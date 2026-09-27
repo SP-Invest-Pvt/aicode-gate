@@ -1,0 +1,46 @@
+name: aicode-gate
+description: Fail the build when AI-attributed code in critical paths carries more SAST findings per 1,000 lines than policy allows.
+branding:
+  icon: shield
+  color: gray-dark
+
+inputs:
+  sarif:
+    description: SARIF file with the SAST findings for the checked-out commit.
+    required: true
+  policy:
+    description: Policy YAML (max_ai_density_critical_paths, critical_paths, fail_on_unknown_origin).
+    required: true
+  attribution:
+    description: Attribution YAML. Default is <repo>/attribution.yaml if present, else the built-in rules.
+    required: false
+    default: ""
+  repo:
+    description: Path to the git repository. It needs full history, so check out with fetch-depth 0.
+    required: false
+    default: "."
+  python-version:
+    description: Python version used to run the gate.
+    required: false
+    default: "3.12"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v7
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install aicode-gate
+      shell: bash
+      run: python -m pip install --quiet "$GITHUB_ACTION_PATH"
+    - name: Run the gate
+      shell: bash
+      env:
+        AG_SARIF: ${{ inputs.sarif }}
+        AG_POLICY: ${{ inputs.policy }}
+        AG_ATTRIBUTION: ${{ inputs.attribution }}
+        AG_REPO: ${{ inputs.repo }}
+      run: |
+        args=(check --repo "$AG_REPO" --sarif "$AG_SARIF" --policy "$AG_POLICY")
+        if [ -n "$AG_ATTRIBUTION" ]; then args+=(--attribution "$AG_ATTRIBUTION"); fi
+        python -m aicode_gate "${args[@]}"

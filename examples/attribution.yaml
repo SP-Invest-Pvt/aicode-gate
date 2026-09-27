@@ -1,0 +1,4 @@
+# Commit is AI-attributed if the author (lowercased) is a bot, or the message contains a marker.
+bots: [claude, copilot, cursor]
+ai_markers: ["Co-Authored-By: Claude", "generated with", "AI-assisted"]
+author_origin: {"sankalp": human}
