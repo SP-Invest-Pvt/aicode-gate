@@ -1,0 +1,51 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e ".[test]"
+      - run: pytest -q --cov=aicode_gate --cov-report=term-missing
+      - run: python -m aicode_gate --help > /dev/null
+
+  action:
+    # Exercise action.yml end to end on the demo repository. The demo is built to fail the gate.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - run: examples/build_demo_repo.sh "$RUNNER_TEMP/demo-repo"
+      - id: gate
+        continue-on-error: true
+        uses: ./
+        with:
+          repo: ${{ runner.temp }}/demo-repo
+          sarif: examples/findings.sarif
+          policy: examples/policy.yaml
+          attribution: examples/attribution.yaml
+      - name: The demo must fail the gate
+        if: steps.gate.outcome != 'failure'
+        run: |
+          echo "expected the gate to fail on the demo repository, got: ${{ steps.gate.outcome }}"
+          exit 1
