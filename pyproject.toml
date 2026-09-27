@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aicode-gate"
+version = "0.1.0"
+description = "Attribute lines to AI or human authors from git history and gate on vulnerability density in AI-written code"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = ["pyyaml>=6"]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pytest-cov>=5"]
+
+[project.scripts]
+aicode-gate = "aicode_gate.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["aicode_gate*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
