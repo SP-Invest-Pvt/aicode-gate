@@ -132,11 +132,19 @@ def commit_origins(repo: str | Path, cfg: AttributionConfig) -> dict[str, Commit
     return commits
 
 
-def blame_file(repo: str | Path, path: str) -> list[str]:
+def blame_args(repo: str | Path, ignore_whitespace: bool = False) -> list[str]:
+    """Extra blame options: -w on request, and the repository's .git-blame-ignore-revs if it has one."""
+    args = ["-w"] if ignore_whitespace else []
+    if (Path(repo) / ".git-blame-ignore-revs").is_file():
+        args += ["--ignore-revs-file", ".git-blame-ignore-revs"]
+    return args
+
+
+def blame_file(repo: str | Path, path: str, extra: list[str] | None = None) -> list[str]:
     """Commit sha for each line of path at HEAD's working tree (uncommitted lines get 40 zeros)."""
     shas = []
     current = None
-    for line in git(repo, "blame", "--line-porcelain", "--", path).splitlines():
+    for line in git(repo, "blame", "--line-porcelain", *(extra or []), "--", path).splitlines():
         m = _BLAME_HEADER.match(line)
         if m:
             current = m.group(1)
@@ -161,15 +169,19 @@ def _is_text(repo: str | Path, path: str) -> bool:
 
 
 def attribute(repo: str | Path, cfg: AttributionConfig, prefixes: list[str] | None = None,
-              files: list[str] | None = None) -> dict[str, FileAttribution]:
-    """Per-file line origins for tracked text files (optionally only under prefixes, or only files)."""
+              files: list[str] | None = None, ignore_whitespace: bool = False) -> dict[str, FileAttribution]:
+    """Per-file line origins for tracked text files (optionally only under prefixes, or only files).
+
+    ignore_whitespace keeps a line with the commit that wrote it when a later commit only re-indents it.
+    """
     commits = commit_origins(repo, cfg)
+    extra = blame_args(repo, ignore_whitespace)
     result = {}
     for path in (files if files is not None else tracked_files(repo, prefixes)):
         if not _is_text(repo, path):
             continue
         fa = FileAttribution(path)
-        for sha in blame_file(repo, path):
+        for sha in blame_file(repo, path, extra):
             c = commits.get(sha)
             fa.line_origins.append(c.origin if c else "human")
             if c is None or not c.known:
